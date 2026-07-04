@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Artikel-Plist"
+version = "1.0.0"
+id = "artifacts/artikel-plist"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21380
+
+[services.development]
+run = "pnpm --filter @workspace/artikel-plist run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/artikel-plist", "run", "build" ]
+publicDir = "artifacts/artikel-plist/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21380"
+BASE_PATH = "/"

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: articles
+    description: Artikel operations (synced with Dropbox plist file)
 paths:
   /healthz:
     get:
@@ -24,6 +26,159 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /articles:
+    get:
+      operationId: listArticles
+      tags: [articles]
+      summary: List articles
+      description: Returns a paginated, searchable list of articles
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sparte
+          in: query
+          schema:
+            type: string
+        - name: wg
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArticleListResponse"
+    post:
+      operationId: createArticle
+      tags: [articles]
+      summary: Create article
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArticleInput"
+      responses:
+        "201":
+          description: Created article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+  /articles/{id}:
+    get:
+      operationId: getArticle
+      tags: [articles]
+      summary: Get a single article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateArticle
+      tags: [articles]
+      summary: Update an article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArticleInput"
+      responses:
+        "200":
+          description: Updated article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteArticle
+      tags: [articles]
+      summary: Delete an article
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /meta:
+    get:
+      operationId: getMeta
+      tags: [articles]
+      summary: Get metadata for dropdowns and sync status
+      responses:
+        "200":
+          description: Metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaResponse"
+  /sync:
+    post:
+      operationId: syncFromDropbox
+      tags: [articles]
+      summary: Reload the article list from the Dropbox plist file
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +188,165 @@ components:
           type: string
       required:
         - status
-
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+    DeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        id:
+          type: string
+      required:
+        - success
+        - id
+    Article:
+      type: object
+      description: Ein Artikel aus dem Kassensystem (Dropbox artikelData.plist)
+      properties:
+        ArtikelId:
+          type: string
+          description: Eindeutige Artikelnummer
+        Artikel:
+          type: string
+          description: Artikelname
+        BarCode:
+          type: string
+        ComboArtikel:
+          type: string
+        Drucker:
+          type: string
+          description: Bondrucker-Ziel (z.B. Tresen, Kueche, Gutscheindruck)
+        FreierPreis:
+          type: string
+          description: "\"1\" wenn freier Preis erlaubt ist, sonst \"0\""
+        Gutschrift:
+          type: string
+        LongText:
+          type: string
+        MWSt:
+          type: string
+          description: Mehrwertsteuersatz
+        MWStAH:
+          type: string
+          description: Mehrwertsteuersatz Außer Haus
+        Maincourse:
+          type: string
+        NichtUmsatzRelevant:
+          type: string
+        PicturePath:
+          type: string
+        Preis:
+          type: string
+          description: Verkaufspreis
+        PreisAH:
+          type: string
+          description: Verkaufspreis Außer Haus
+        Preisliste:
+          type: string
+        RabattAusnahme:
+          type: string
+        Rezeptur:
+          type: string
+        Sparte:
+          type: string
+        SpartenId:
+          type: string
+        SpartenSteuerung:
+          type: string
+        WG:
+          type: string
+          description: Warengruppe
+        Zusatztext:
+          type: string
+        FollowStock:
+          type: string
+        ArticleDailyInitialCount:
+          type: string
+        Expenses:
+          type: string
+        Intern:
+          type: string
+        Manufacturer:
+          type: string
+        ManufacturerID:
+          type: string
+        ManufacturerItemName:
+          type: string
+        Naehrwertangaben:
+          type: string
+        Ordercode:
+          type: string
+        PurchasePrice:
+          type: string
+        sort:
+          type: string
+        articleTSE:
+          type: string
+        printEvenZero:
+          type: string
+        showArticleOnlyForThisUser:
+          type: string
+        ArtikelTextLang:
+          type: string
+      required:
+        - ArtikelId
+        - Artikel
+    ArticleInput:
+      allOf:
+        - $ref: "#/components/schemas/Article"
+      description: Gleiche Felder wie Article; ArtikelId ist beim Anlegen optional (wird automatisch vergeben)
+    ArticleListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+    MetaResponse:
+      type: object
+      properties:
+        gesamtAnzahl:
+          type: integer
+        letzteSynchronisierung:
+          type: string
+          format: date-time
+        sparten:
+          type: array
+          items:
+            type: string
+        druckerListe:
+          type: array
+          items:
+            type: string
+        preislisten:
+          type: array
+          items:
+            type: string
+        warengruppen:
+          type: array
+          items:
+            type: string
+      required:
+        - gesamtAnzahl
+        - letzteSynchronisierung
+        - sparten
+        - druckerListe
+        - preislisten
+        - warengruppen
