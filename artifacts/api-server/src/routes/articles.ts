@@ -17,6 +17,7 @@ import {
   deleteArticle,
   getMeta,
   syncFromDropbox,
+  exportPlist,
 } from "../lib/articleStore";
 import { logger } from "../lib/logger";
 
@@ -92,6 +93,27 @@ router.post("/sync", async (_req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to sync from Dropbox");
     res.status(500).json({ message: "Synchronisierung fehlgeschlagen" });
+  }
+});
+
+// Not part of the OpenAPI/Zod contract on purpose: this is a raw file
+// download (browser "Save As" flow), not a JSON API response. The frontend
+// links to this URL directly instead of using a generated hook, so the user
+// can save an exported copy of the plist (e.g. to a different folder / their
+// iPad's Files app) independent of the live Dropbox sync file.
+router.get("/export", async (_req, res) => {
+  try {
+    const raw = await exportPlist();
+    const timestamp = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "application/x-plist");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="artikelData_export_${timestamp}.plist"`,
+    );
+    res.send(raw);
+  } catch (err) {
+    logger.error({ err }, "Failed to export plist");
+    res.status(500).json({ message: "Export fehlgeschlagen" });
   }
 });
 

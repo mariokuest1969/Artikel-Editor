@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
-import { RefreshCw, LayoutDashboard, Plus, Settings } from "lucide-react";
+import { RefreshCw, LayoutDashboard, Plus, Download } from "lucide-react";
 import { useGetMeta, useSyncFromDropbox, getGetMetaQueryKey, getListArticlesQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -57,9 +57,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
               className="w-full h-8 text-xs bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90" 
               onClick={handleSync}
               disabled={syncMutation.isPending}
+              data-testid="button-sync"
             >
               <RefreshCw className={`w-3 h-3 mr-2 ${syncMutation.isPending ? "animate-spin" : ""}`} />
               Sync Now
+            </Button>
+            <Button
+              variant="outline"
+              asChild
+              className="w-full h-8 text-xs mt-2"
+              data-testid="button-export"
+            >
+              <a href="/api/export" download>
+                <Download className="w-3 h-3 mr-2" />
+                Als .plist exportieren
+              </a>
             </Button>
           </div>
           <div className="text-xs text-sidebar-foreground/50 text-center">

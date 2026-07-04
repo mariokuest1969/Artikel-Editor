@@ -1,4 +1,4 @@
-import plist from "plist";
+import * as plist from "plist";
 import { downloadPlist, uploadPlist } from "./dropbox";
 import { logger } from "./logger";
 
@@ -188,6 +188,11 @@ export async function deleteArticle(id: string): Promise<boolean> {
   articles.splice(index, 1);
   await persist();
   return true;
+}
+
+export async function exportPlist(): Promise<string> {
+  await ensureLoaded();
+  return serializeArticlesToPlist(articles);
 }
 
 export async function getMeta(): Promise<MetaResult> {

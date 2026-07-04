@@ -1,0 +1,1 @@
+- [Dropbox connector proxy content-host limitation](dropbox-connector-proxy.md) — content-host endpoints (upload/download) 404 through `connectors.proxy`; use temporary-link endpoints + direct fetch instead.
