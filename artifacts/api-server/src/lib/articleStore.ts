@@ -65,12 +65,52 @@ function distinctSorted(values: (string | undefined)[]): string[] {
   return Array.from(set).sort((a, b) => a.localeCompare(b, "de"));
 }
 
+// Automation rule 1: "Tresen" printer articles always carry 19% VAT.
+// Format ("19,00") matches the existing comma-decimal convention used in the plist.
+const TRESEN_MWST = "19,00";
+const TRESEN_PRINTER = "Tresen";
+
+function normalizeArticle(article: Article): { article: Article; changed: boolean } {
+  if (
+    (article.Drucker ?? "").trim() === TRESEN_PRINTER &&
+    (article.MWSt ?? "").trim() !== TRESEN_MWST
+  ) {
+    return { article: { ...article, MWSt: TRESEN_MWST }, changed: true };
+  }
+  return { article, changed: false };
+}
+
+// Automation rule 2: drop "Leerzeilen" -- articles with no article name at all.
+function normalizeArticles(items: Article[]): { items: Article[]; changed: boolean } {
+  let changed = false;
+  const result: Article[] = [];
+  for (const item of items) {
+    if ((item.Artikel ?? "").trim() === "") {
+      changed = true;
+      continue;
+    }
+    const { article, changed: itemChanged } = normalizeArticle(item);
+    if (itemChanged) changed = true;
+    result.push(article);
+  }
+  return { items: result, changed };
+}
+
 async function doLoad(): Promise<void> {
   const raw = await downloadPlist();
-  articles = parsePlistToArticles(raw);
+  const parsed = parsePlistToArticles(raw);
+  const { items, changed } = normalizeArticles(parsed);
+  articles = items;
   lastSync = new Date();
   loaded = true;
   logger.info({ count: articles.length }, "Loaded articles from Dropbox");
+
+  if (changed) {
+    logger.info(
+      "Automatic normalization (Tresen -> 19% MWSt / Leerzeilen entfernen) changed data; persisting corrected plist to Dropbox",
+    );
+    await persist();
+  }
 }
 
 export async function ensureLoaded(): Promise<void> {
@@ -149,10 +189,10 @@ export async function createArticle(input: ArticleInput): Promise<Article> {
     throw new Error(`ArtikelId "${id}" existiert bereits`);
   }
 
-  const article: Article = {
+  const { article } = normalizeArticle({
     ...input,
     ArtikelId: id,
-  } as Article;
+  } as Article);
 
   articles.push(article);
   await persist();
@@ -168,11 +208,11 @@ export async function updateArticle(
   const index = articles.findIndex((a) => a.ArtikelId === id);
   if (index === -1) return undefined;
 
-  const updated: Article = {
+  const { article: updated } = normalizeArticle({
     ...articles[index],
     ...input,
     ArtikelId: id,
-  } as Article;
+  } as Article);
 
   articles[index] = updated;
   await persist();
