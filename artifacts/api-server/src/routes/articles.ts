@@ -58,7 +58,7 @@ router.get("/articles/:id", async (req, res) => {
 router.put("/articles/:id", async (req, res) => {
   try {
     const { id } = UpdateArticleParams.parse(req.params);
-    const body = UpdateArticleBody.partial({ ArtikelId: true }).parse(req.body);
+    const body = UpdateArticleBody.partial({ ArtikelId: true, Artikel: true }).parse(req.body);
     const article = await updateArticle(id, body);
     if (!article) {
       res.status(404).json({ message: "Artikel nicht gefunden" });

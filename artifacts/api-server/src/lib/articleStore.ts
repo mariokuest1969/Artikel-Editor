@@ -69,10 +69,14 @@ function distinctSorted(values: (string | undefined)[]): string[] {
 // Format ("19,00") matches the existing comma-decimal convention used in the plist.
 const TRESEN_MWST = "19,00";
 const TRESEN_PRINTER = "Tresen";
+// Articles 9002 and 9003 are always 0,00 (in Haus / außer Haus) and must be
+// excluded from the automatic Tresen -> 19% MWSt rule.
+const TRESEN_MWST_EXCLUDED_IDS = new Set(["9002", "9003"]);
 
 function normalizeArticle(article: Article): { article: Article; changed: boolean } {
   if (
     (article.Drucker ?? "").trim() === TRESEN_PRINTER &&
+    !TRESEN_MWST_EXCLUDED_IDS.has((article.ArtikelId ?? "").trim()) &&
     (article.MWSt ?? "").trim() !== TRESEN_MWST
   ) {
     return { article: { ...article, MWSt: TRESEN_MWST }, changed: true };
