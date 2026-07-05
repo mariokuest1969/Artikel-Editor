@@ -1,1 +1,2 @@
 - [Dropbox connector proxy content-host limitation](dropbox-connector-proxy.md) — content-host endpoints (upload/download) 404 through `connectors.proxy`; use temporary-link endpoints + direct fetch instead.
+- [OpenAPI update body schemas](openapi-update-body-schema.md) — update/PUT routes must not reuse the create schema's required-field set for body validation.
