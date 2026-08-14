@@ -104,6 +104,12 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+// Plist stores prices/percentages with German decimal comma (e.g. "3,50", "19,00").
+// HTML number inputs only accept dot-decimal. Convert on load and restore on save.
+const GERMAN_DECIMAL_FIELDS = ["Preis", "PreisAH", "MWSt", "MWStAH", "PurchasePrice"];
+const germanToDecimal = (v: string) => v.replace(",", ".");
+const decimalToGerman = (v: string) => v.replace(".", ",");
+
 export default function ArticleForm() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/artikel/:id");
@@ -143,15 +149,19 @@ export default function ArticleForm() {
   });
 
   useEffect(() => {
-    if (article && !isNew) {
-      // Map API data to form
+    // Wait for both article data AND meta (dropdown options) to be available before
+    // resetting the form. If form.reset() fires before SelectItems are rendered, the
+    // Select component cannot match the value to an option and shows the placeholder.
+    if (article && !isNew && meta) {
+      // Map API data to form; convert German comma-decimal to dot-decimal for number inputs
       const data: Record<string, string> = {};
       Object.entries(article).forEach(([key, value]) => {
-        data[key] = value || "";
+        const v = value || "";
+        data[key] = GERMAN_DECIMAL_FIELDS.includes(key) ? germanToDecimal(v) : v;
       });
       form.reset(data as FormValues);
     }
-  }, [article, isNew, form]);
+  }, [article, isNew, form, meta]);
 
   const onSubmit = (values: FormValues) => {
     // Clean up empty optional fields
@@ -159,6 +169,12 @@ export default function ArticleForm() {
     Object.keys(cleanedValues).forEach(key => {
       if (cleanedValues[key] === "") {
         delete cleanedValues[key];
+      }
+    });
+    // Convert dot-decimal back to German comma-decimal for plist storage
+    GERMAN_DECIMAL_FIELDS.forEach(field => {
+      if (cleanedValues[field]) {
+        cleanedValues[field] = decimalToGerman(String(cleanedValues[field]));
       }
     });
 

@@ -175,7 +175,7 @@ export default function ArticlesList() {
                     <TableCell className="font-medium">{article.Artikel}</TableCell>
                     <TableCell>
                       {article.Preis ? (
-                        <span className="font-medium text-primary">€{parseFloat(article.Preis).toFixed(2)}</span>
+                        <span className="font-medium text-primary">€{parseFloat(article.Preis.replace(",", ".")).toFixed(2)}</span>
                       ) : "-"}
                     </TableCell>
                     <TableCell>
