@@ -45,6 +45,38 @@ let lastSyncError: string | null = null;
 let loaded = false;
 let loadPromise: Promise<void> | null = null;
 let autoSyncTimer: ReturnType<typeof setInterval> | null = null;
+let currentIntervalMs: number | null = null;
+
+const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+function resolveIntervalMs(): number {
+  if (currentIntervalMs !== null) return currentIntervalMs;
+  const raw = process.env["AUTO_SYNC_INTERVAL_MS"];
+  const parsed =
+    raw && Number.isFinite(Number(raw)) && Number(raw) > 0
+      ? Number(raw)
+      : DEFAULT_INTERVAL_MS;
+  currentIntervalMs = parsed;
+  return parsed;
+}
+
+/** Returns the currently active auto-sync interval in milliseconds. */
+export function getAutoSyncInterval(): number {
+  return resolveIntervalMs();
+}
+
+/**
+ * Change the auto-sync interval at runtime. The running timer is replaced
+ * immediately so the next tick fires after the new interval.
+ */
+export function setAutoSyncInterval(ms: number): void {
+  currentIntervalMs = ms;
+  if (autoSyncTimer !== null) {
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
+  }
+  startAutoSync();
+}
 
 function parsePlistToArticles(raw: string): Article[] {
   const parsed = plist.parse(raw);
@@ -129,10 +161,7 @@ async function doLoad(): Promise<void> {
 export function startAutoSync(): void {
   if (autoSyncTimer !== null) return;
 
-  const rawInterval = process.env["AUTO_SYNC_INTERVAL_MS"];
-  const intervalMs = rawInterval && Number.isFinite(Number(rawInterval)) && Number(rawInterval) > 0
-    ? Number(rawInterval)
-    : 5 * 60 * 1000; // 5 minutes default
+  const intervalMs = resolveIntervalMs();
 
   logger.info({ intervalMs }, "Auto-sync started");
 

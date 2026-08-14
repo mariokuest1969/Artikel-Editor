@@ -8,6 +8,7 @@ import {
   DeleteArticleParams,
   GetMetaResponse,
   SyncFromDropboxResponse,
+  SetSyncConfigBody,
 } from "@workspace/api-zod";
 import {
   listArticles,
@@ -18,6 +19,8 @@ import {
   getMeta,
   syncFromDropbox,
   exportPlist,
+  getAutoSyncInterval,
+  setAutoSyncInterval,
 } from "../lib/articleStore";
 import { logger } from "../lib/logger";
 
@@ -93,6 +96,21 @@ router.post("/sync", async (_req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to sync from Dropbox");
     res.status(500).json({ message: "Synchronisierung fehlgeschlagen" });
+  }
+});
+
+router.get("/sync-config", (_req, res) => {
+  res.json({ intervalMs: getAutoSyncInterval() });
+});
+
+router.put("/sync-config", (req, res) => {
+  try {
+    const { intervalMs } = SetSyncConfigBody.parse(req.body);
+    setAutoSyncInterval(intervalMs);
+    res.json({ intervalMs: getAutoSyncInterval() });
+  } catch (err) {
+    logger.error({ err }, "Invalid sync-config body");
+    res.status(400).json({ message: "Ungültige Konfiguration" });
   }
 });
 

@@ -1,11 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
-import { RefreshCw, LayoutDashboard, Plus, Download, AlertTriangle, Clock } from "lucide-react";
+import { RefreshCw, LayoutDashboard, Plus, Download, AlertTriangle, Clock, Timer } from "lucide-react";
 import { useGetMeta, useSyncFromDropbox, getGetMetaQueryKey, getListArticlesQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { SyncSettingsDialog, formatIntervalLabel } from "@/components/sync-settings-dialog";
+import { useGetSyncConfig, getGetSyncConfigQueryKey } from "@workspace/api-client-react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -17,6 +19,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       refetchInterval: 60_000,
     },
   });
+  const { data: syncConfig, refetch: refetchSyncConfig } = useGetSyncConfig();
   const syncMutation = useSyncFromDropbox();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -56,7 +59,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="p-4 border-t border-sidebar-border space-y-4">
           <div className="bg-sidebar-accent/30 rounded-lg p-3">
-            <p className="text-xs font-medium text-sidebar-foreground/70 mb-1">Dropbox Sync</p>
+            {/* Header row: label + settings gear */}
+            <div className="flex items-center mb-1">
+              <p className="text-xs font-medium text-sidebar-foreground/70">Dropbox Sync</p>
+              <SyncSettingsDialog
+                onIntervalChanged={() => refetchSyncConfig()}
+              />
+            </div>
+
+            {/* Auto-sync interval indicator */}
+            <div className="flex items-center gap-1 mb-2">
+              <Timer className="w-3 h-3 text-sidebar-foreground/40" />
+              <p className="text-xs text-sidebar-foreground/50">
+                {syncConfig ? formatIntervalLabel(syncConfig.intervalMs) : "Auto-Sync: alle 5 Minuten"}
+              </p>
+            </div>
 
             {/* Sync error banner */}
             {meta?.letzteSynchronisierungFehler && (
