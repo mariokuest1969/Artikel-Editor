@@ -32,6 +32,7 @@ interface ListResult {
 interface MetaResult {
   gesamtAnzahl: number;
   letzteSynchronisierung: string;
+  letzteSynchronisierungFehler: string | null;
   sparten: string[];
   druckerListe: string[];
   preislisten: string[];
@@ -40,8 +41,10 @@ interface MetaResult {
 
 let articles: Article[] = [];
 let lastSync: Date | null = null;
+let lastSyncError: string | null = null;
 let loaded = false;
 let loadPromise: Promise<void> | null = null;
+let autoSyncTimer: ReturnType<typeof setInterval> | null = null;
 
 function parsePlistToArticles(raw: string): Article[] {
   const parsed = plist.parse(raw);
@@ -106,6 +109,7 @@ async function doLoad(): Promise<void> {
   const { items, changed } = normalizeArticles(parsed);
   articles = items;
   lastSync = new Date();
+  lastSyncError = null;
   loaded = true;
   logger.info({ count: articles.length }, "Loaded articles from Dropbox");
 
@@ -115,6 +119,34 @@ async function doLoad(): Promise<void> {
     );
     await persist();
   }
+}
+
+/**
+ * Start a background timer that syncs from Dropbox at a fixed interval.
+ * The interval is configurable via the AUTO_SYNC_INTERVAL_MS environment
+ * variable (default: 5 minutes). Calling this a second time is a no-op.
+ */
+export function startAutoSync(): void {
+  if (autoSyncTimer !== null) return;
+
+  const rawInterval = process.env["AUTO_SYNC_INTERVAL_MS"];
+  const intervalMs = rawInterval && Number.isFinite(Number(rawInterval)) && Number(rawInterval) > 0
+    ? Number(rawInterval)
+    : 5 * 60 * 1000; // 5 minutes default
+
+  logger.info({ intervalMs }, "Auto-sync started");
+
+  autoSyncTimer = setInterval(() => {
+    logger.info("Auto-sync: running background sync from Dropbox");
+    doLoad().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      lastSyncError = message;
+      logger.error({ err }, "Auto-sync failed");
+    });
+  }, intervalMs);
+
+  // Keep the timer from preventing process exit (useful in tests / dev).
+  if (autoSyncTimer.unref) autoSyncTimer.unref();
 }
 
 export async function ensureLoaded(): Promise<void> {
@@ -245,6 +277,7 @@ export async function getMeta(): Promise<MetaResult> {
   return {
     gesamtAnzahl: articles.length,
     letzteSynchronisierung: (lastSync ?? new Date()).toISOString(),
+    letzteSynchronisierungFehler: lastSyncError,
     sparten: distinctSorted(articles.map((a) => a.Sparte)),
     druckerListe: distinctSorted(articles.map((a) => a.Drucker)),
     preislisten: distinctSorted(articles.map((a) => a.Preisliste)),

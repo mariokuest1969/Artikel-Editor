@@ -86,6 +86,8 @@ export interface ArticleListResponse {
 export interface MetaResponse {
   gesamtAnzahl: number;
   letzteSynchronisierung: string;
+  /** Fehlermeldung des letzten fehlgeschlagenen Auto-Syncs, oder null wenn der letzte Sync erfolgreich war */
+  letzteSynchronisierungFehler?: string | null;
   sparten: string[];
   druckerListe: string[];
   preislisten: string[];

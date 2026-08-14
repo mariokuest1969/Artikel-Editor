@@ -36,7 +36,14 @@ export default function ArticlesList() {
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
-  const { data: meta } = useGetMeta({ query: { queryKey: getGetMetaQueryKey() } });
+  // Poll every 60 seconds so the UI picks up background auto-sync changes
+  // within a minute of them landing on the server.
+  const { data: meta } = useGetMeta({
+    query: {
+      queryKey: getGetMetaQueryKey(),
+      refetchInterval: 60_000,
+    },
+  });
   
   const { data, isLoading } = useListArticles(
     { 
@@ -48,7 +55,8 @@ export default function ArticlesList() {
     },
     { 
       query: { 
-        queryKey: getListArticlesQueryKey({ search: debouncedSearch || undefined, sparte: sparte !== "all" ? sparte : undefined, wg: wg !== "all" ? wg : undefined, page, pageSize }) 
+        queryKey: getListArticlesQueryKey({ search: debouncedSearch || undefined, sparte: sparte !== "all" ? sparte : undefined, wg: wg !== "all" ? wg : undefined, page, pageSize }),
+        refetchInterval: 60_000,
       } 
     }
   );

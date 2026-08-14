@@ -323,6 +323,7 @@ export const DeleteArticleResponse = zod.object({
 export const GetMetaResponse = zod.object({
   "gesamtAnzahl": zod.number(),
   "letzteSynchronisierung": zod.coerce.date(),
+  "letzteSynchronisierungFehler": zod.string().nullable().optional(),
   "sparten": zod.array(zod.string()),
   "druckerListe": zod.array(zod.string()),
   "preislisten": zod.array(zod.string()),
@@ -336,6 +337,7 @@ export const GetMetaResponse = zod.object({
 export const SyncFromDropboxResponse = zod.object({
   "gesamtAnzahl": zod.number(),
   "letzteSynchronisierung": zod.coerce.date(),
+  "letzteSynchronisierungFehler": zod.string().nullable().optional(),
   "sparten": zod.array(zod.string()),
   "druckerListe": zod.array(zod.string()),
   "preislisten": zod.array(zod.string()),

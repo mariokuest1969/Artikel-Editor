@@ -327,6 +327,10 @@ components:
         letzteSynchronisierung:
           type: string
           format: date-time
+        letzteSynchronisierungFehler:
+          type: string
+          nullable: true
+          description: Fehlermeldung des letzten fehlgeschlagenen Auto-Syncs, oder null wenn der letzte Sync erfolgreich war
         sparten:
           type: array
           items:

@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { format } from "date-fns";
-import { RefreshCw, LayoutDashboard, Plus, Download } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { de } from "date-fns/locale";
+import { RefreshCw, LayoutDashboard, Plus, Download, AlertTriangle, Clock } from "lucide-react";
 import { useGetMeta, useSyncFromDropbox, getGetMetaQueryKey, getListArticlesQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +9,14 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const { data: meta } = useGetMeta({ query: { queryKey: getGetMetaQueryKey() } });
+  // Poll every 60 seconds so the UI picks up background auto-sync changes
+  // within a minute of them landing on the server.
+  const { data: meta } = useGetMeta({
+    query: {
+      queryKey: getGetMetaQueryKey(),
+      refetchInterval: 60_000,
+    },
+  });
   const syncMutation = useSyncFromDropbox();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -48,10 +56,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="p-4 border-t border-sidebar-border space-y-4">
           <div className="bg-sidebar-accent/30 rounded-lg p-3">
-            <p className="text-xs font-medium text-sidebar-foreground/70 mb-1">Last Dropbox Sync</p>
-            <p className="text-sm text-sidebar-foreground mb-3">
-              {meta?.letzteSynchronisierung ? format(new Date(meta.letzteSynchronisierung), "dd.MM.yyyy HH:mm") : "Unknown"}
-            </p>
+            <p className="text-xs font-medium text-sidebar-foreground/70 mb-1">Dropbox Sync</p>
+
+            {/* Sync error banner */}
+            {meta?.letzteSynchronisierungFehler && (
+              <div className="flex items-start gap-1.5 mb-2 p-2 rounded bg-destructive/10 text-destructive">
+                <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                <p className="text-xs leading-tight break-words">
+                  Auto-Sync fehlgeschlagen: {meta.letzteSynchronisierungFehler}
+                </p>
+              </div>
+            )}
+
+            {/* Last sync time */}
+            <div className="flex items-center gap-1 mb-3">
+              <Clock className="w-3 h-3 text-sidebar-foreground/50" />
+              <p className="text-xs text-sidebar-foreground/70">
+                {meta?.letzteSynchronisierung
+                  ? formatDistanceToNow(new Date(meta.letzteSynchronisierung), { addSuffix: true, locale: de })
+                  : "Unbekannt"}
+              </p>
+            </div>
+
             <Button 
               variant="secondary" 
               className="w-full h-8 text-xs bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90" 
@@ -60,7 +86,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               data-testid="button-sync"
             >
               <RefreshCw className={`w-3 h-3 mr-2 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-              Sync Now
+              Jetzt synchronisieren
             </Button>
             <Button
               variant="outline"
@@ -75,7 +101,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
           <div className="text-xs text-sidebar-foreground/50 text-center">
-            {meta?.gesamtAnzahl ? `${meta.gesamtAnzahl} articles total` : ""}
+            {meta?.gesamtAnzahl ? `${meta.gesamtAnzahl} Artikel gesamt` : ""}
           </div>
         </div>
       </div>
