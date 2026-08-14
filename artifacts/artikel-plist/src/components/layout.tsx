@@ -4,19 +4,20 @@ import { de } from "date-fns/locale";
 import { RefreshCw, LayoutDashboard, Plus, Download, AlertTriangle, Clock, Timer } from "lucide-react";
 import { useGetMeta, useSyncFromDropbox, getGetMetaQueryKey, getListArticlesQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { SyncSettingsDialog, formatIntervalLabel } from "@/components/sync-settings-dialog";
 import { useGetSyncConfig, getGetSyncConfigQueryKey } from "@workspace/api-client-react";
+import { useRef, useEffect } from "react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  // Poll every 60 seconds so the UI picks up background auto-sync changes
-  // within a minute of them landing on the server.
+  // Poll every 30 seconds so the UI picks up background auto-sync changes quickly.
   const { data: meta } = useGetMeta({
     query: {
       queryKey: getGetMetaQueryKey(),
-      refetchInterval: 60_000,
+      refetchInterval: 30_000,
     },
   });
   const { data: syncConfig, refetch: refetchSyncConfig } = useGetSyncConfig();
@@ -36,6 +37,43 @@ export function Layout({ children }: { children: React.ReactNode }) {
       }
     });
   };
+
+  // prevErrorRef is initialized to `undefined` (sentinel: "not yet seen a real response").
+  // On the first successful meta fetch we silently record whatever error state already exists
+  // without toasting — the user may be loading the page into a pre-existing error and the
+  // sidebar already shows it. Only subsequent null→error transitions trigger a toast.
+  const prevErrorRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    // meta is undefined while the first request is still in flight; skip those renders.
+    if (meta === undefined) return;
+
+    const currentError = meta.letzteSynchronisierungFehler ?? null;
+    const prevError = prevErrorRef.current;
+
+    if (prevError === undefined) {
+      // First successful response — seed the baseline silently, no toast.
+      prevErrorRef.current = currentError;
+      return;
+    }
+
+    // Toast only when a subsequent poll reveals a new error (previous poll was clean).
+    if (!prevError && currentError) {
+      toast({
+        title: "Auto-Sync fehlgeschlagen",
+        description: currentError,
+        variant: "destructive",
+        action: (
+          <ToastAction altText="Jetzt synchronisieren" onClick={handleSync}>
+            Jetzt synchronisieren
+          </ToastAction>
+        ),
+      });
+    }
+
+    prevErrorRef.current = currentError;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
