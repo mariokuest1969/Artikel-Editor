@@ -245,6 +245,24 @@ function nextArtikelId(): string {
   return String(max + 1);
 }
 
+export async function cloneArticle(id: string): Promise<Article | undefined> {
+  await ensureLoaded();
+  const source = articles.find((a) => a.ArtikelId === id);
+  if (!source) return undefined;
+
+  // Preserve every plist field, including fields not exposed in the editor.
+  const copy: Article = { ...source, ArtikelId: nextArtikelId() };
+  articles.push(copy);
+  try {
+    await persist();
+  } catch (error) {
+    // A failed upload must not leave a phantom clone in the local list.
+    articles = articles.filter((article) => article !== copy);
+    throw error;
+  }
+  return copy;
+}
+
 export async function createArticle(input: ArticleInput): Promise<Article> {
   await ensureLoaded();
 

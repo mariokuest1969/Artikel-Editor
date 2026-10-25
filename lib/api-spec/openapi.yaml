@@ -79,6 +79,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Article"
+  /articles/{id}/clone:
+    post:
+      operationId: cloneArticle
+      tags: [articles]
+      summary: Clone saved article with the next number above the highest existing article number
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Cloned article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "404":
+          description: Source article not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Clone could not be saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /articles/{id}:
     get:
       operationId: getArticle
@@ -179,8 +209,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MetaResponse"
+  /sync-config:
+    get:
+      operationId: getSyncConfig
+      responses:
+        "200":
+          description: Current sync interval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncConfig"
+    put:
+      operationId: setSyncConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncConfig"
+      responses:
+        "200":
+          description: Updated sync interval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncConfig"
 components:
   schemas:
+    SyncConfig:
+      type: object
+      required: [intervalMs]
+      properties:
+        intervalMs:
+          type: integer
+          minimum: 0
     HealthStatus:
       type: object
       properties:

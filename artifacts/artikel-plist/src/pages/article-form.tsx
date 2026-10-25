@@ -3,10 +3,11 @@ import { useRoute, useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { ArrowLeft, Save, Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2, AlertTriangle, Loader2, Copy } from "lucide-react";
 import { 
   useGetArticle, 
   useCreateArticle, 
+  useCloneArticle,
   useUpdateArticle, 
   useDeleteArticle,
   useGetMeta,
@@ -129,6 +130,7 @@ export default function ArticleForm() {
   });
 
   const createMutation = useCreateArticle();
+  const cloneMutation = useCloneArticle();
   const updateMutation = useUpdateArticle();
   const deleteMutation = useDeleteArticle();
 
@@ -205,6 +207,25 @@ export default function ArticleForm() {
     }
   };
 
+  const handleClone = () => {
+    if (cloneMutation.isPending || !article) return;
+    cloneMutation.mutate({ id: articleId }, {
+      onSuccess: (copy) => {
+        queryClient.setQueryData(getGetArticleQueryKey(copy.ArtikelId), copy);
+        queryClient.invalidateQueries({ queryKey: getListArticlesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetMetaQueryKey() });
+        toast({
+          title: "Artikel geklont",
+          description: `Die Kopie hat die Artikelnummer ${copy.ArtikelId}.`,
+        });
+        setLocation(`/artikel/${encodeURIComponent(copy.ArtikelId)}`);
+      },
+      onError: (error) => {
+        toast({ title: "Klonen fehlgeschlagen", description: error.message, variant: "destructive" });
+      },
+    });
+  };
+
   const handleDelete = () => {
     deleteMutation.mutate({ id: articleId }, {
       onSuccess: () => {
@@ -228,7 +249,7 @@ export default function ArticleForm() {
     );
   }
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const isPending = createMutation.isPending || updateMutation.isPending || cloneMutation.isPending;
 
   return (
     <Layout>
@@ -245,6 +266,31 @@ export default function ArticleForm() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {!isNew && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" disabled={isPending || !article || deleteMutation.isPending}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  {cloneMutation.isPending ? "Wird geklont…" : "Artikel klonen"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Artikel klonen?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Die gespeicherten Daten von „{article?.Artikel}“ werden kopiert und in Dropbox
+                    gespeichert. Die neue Artikelnummer liegt um eins über der höchsten vorhandenen
+                    Nummer. Nicht gespeicherte Änderungen werden nicht übernommen; der Originalartikel
+                    bleibt unverändert. Anschließend wird die Kopie zum Bearbeiten geöffnet.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClone}>Kopie erstellen</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           {!isNew && (
             <AlertDialog>
               <AlertDialogTrigger asChild>

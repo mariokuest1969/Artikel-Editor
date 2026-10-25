@@ -14,3 +14,4 @@ export * from './errorResponse';
 export * from './healthStatus';
 export * from './listArticlesParams';
 export * from './metaResponse';
+export * from './syncConfig';

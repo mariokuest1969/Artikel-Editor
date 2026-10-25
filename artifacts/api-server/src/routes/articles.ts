@@ -14,6 +14,7 @@ import {
   listArticles,
   getArticleById,
   createArticle,
+  cloneArticle,
   updateArticle,
   deleteArticle,
   getMeta,
@@ -45,6 +46,21 @@ router.post("/articles", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to create article");
     res.status(400).json({ message: (err as Error).message ?? "Anlegen fehlgeschlagen" });
+  }
+});
+
+router.post("/articles/:id/clone", async (req, res) => {
+  try {
+    const { id } = GetArticleParams.parse(req.params);
+    const article = await cloneArticle(id);
+    if (!article) {
+      res.status(404).json({ message: "Artikel nicht gefunden" });
+      return;
+    }
+    res.status(201).json(article);
+  } catch (err) {
+    logger.error({ err }, "Failed to clone article");
+    res.status(500).json({ message: "Artikel konnte nicht geklont und in Dropbox gespeichert werden." });
   }
 });
 
