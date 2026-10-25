@@ -27,3 +27,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 APP_PUBLIC_URL = "https://artikel-editor.replit.app"
+ADMIN_EMAILS = "mariokuest@t-online.de"
