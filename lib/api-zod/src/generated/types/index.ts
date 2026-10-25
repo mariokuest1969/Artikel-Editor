@@ -30,4 +30,5 @@ export * from './storagePathsInputMode';
 export * from './storagePathsInputProvider';
 export * from './storageSettings';
 export * from './syncConfig';
+export * from './syncConfigInput';
 export * from './transferResult';

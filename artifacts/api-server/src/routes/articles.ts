@@ -20,7 +20,7 @@ import {
   getMeta,
   syncFromDropbox,
   exportPlist,
-  getAutoSyncInterval,
+  getAutoSyncConfig,
   setAutoSyncInterval,
 } from "../lib/articleStore";
 import { logger } from "../lib/logger";
@@ -116,14 +116,14 @@ router.post("/sync", async (_req, res) => {
 });
 
 router.get("/sync-config", (_req, res) => {
-  res.json({ intervalMs: getAutoSyncInterval() });
+  res.json(getAutoSyncConfig());
 });
 
 router.put("/sync-config", (req, res) => {
   try {
     const { intervalMs } = SetSyncConfigBody.parse(req.body);
     setAutoSyncInterval(intervalMs);
-    res.json({ intervalMs: getAutoSyncInterval() });
+    res.json(getAutoSyncConfig());
   } catch (err) {
     logger.error({ err }, "Invalid sync-config body");
     res.status(400).json({ message: "Ungültige Konfiguration" });

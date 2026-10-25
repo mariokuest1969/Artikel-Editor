@@ -9,4 +9,9 @@
 export interface SyncConfig {
   /** @minimum 0 */
   intervalMs: number;
+  /**
+     * ISO 8601 timestamp of the next scheduled automatic sync, or null when not scheduled.
+     * @nullable
+     */
+  nextSyncAt: string | null;
 }

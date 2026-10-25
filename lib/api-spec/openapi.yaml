@@ -356,7 +356,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SyncConfig"
+              $ref: "#/components/schemas/SyncConfigInput"
       responses:
         "200":
           description: Updated sync interval
@@ -421,6 +421,16 @@ components:
         count: { type: integer }
         message: { type: string }
     SyncConfig:
+      type: object
+      required: [intervalMs, nextSyncAt]
+      properties:
+        intervalMs:
+          type: integer
+          minimum: 0
+        nextSyncAt:
+          type: [string, "null"]
+          description: ISO 8601 timestamp of the next scheduled automatic sync, or null when not scheduled.
+    SyncConfigInput:
       type: object
       required: [intervalMs]
       properties:

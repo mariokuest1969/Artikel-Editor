@@ -11,6 +11,7 @@ import { SyncSettingsDialog, formatIntervalLabel } from "@/components/sync-setti
 import { useGetSyncConfig, getGetSyncConfigQueryKey } from "@workspace/api-client-react";
 import { useRef, useEffect } from "react";
 import { useClerk, useUser } from "@clerk/react";
+import { SyncCountdown } from "@/components/sync-countdown";
 
 const layoutBasePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -26,7 +27,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       refetchInterval: 30_000,
     },
   });
-  const { data: syncConfig, refetch: refetchSyncConfig } = useGetSyncConfig();
+  const { data: syncConfig } = useGetSyncConfig({
+    query: { queryKey: getGetSyncConfigQueryKey(), refetchInterval: 30_000 },
+  });
   const syncMutation = useSyncFromDropbox();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -40,7 +43,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       },
       onError: () => {
         toast({ title: "Sync failed", description: "There was an error synchronizing from Dropbox.", variant: "destructive" });
-      }
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: getGetSyncConfigQueryKey() });
+      },
     });
   };
 
@@ -110,9 +116,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Header row: label + settings gear */}
             <div className="flex items-center mb-1">
               <p className="text-xs font-medium text-sidebar-foreground/70">Dropbox Sync</p>
-              <SyncSettingsDialog
-                onIntervalChanged={() => refetchSyncConfig()}
-              />
+              <SyncSettingsDialog />
             </div>
 
             {/* Auto-sync interval indicator */}
@@ -134,7 +138,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
 
             {/* Last sync time */}
-            <div className="flex items-center gap-1 mb-3">
+            <div className="flex items-center gap-1 mb-1">
               <Clock className="w-3 h-3 text-sidebar-foreground/50" />
               <p className="text-xs text-sidebar-foreground/70">
                 {meta?.letzteSynchronisierung
@@ -142,6 +146,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   : "Unbekannt"}
               </p>
             </div>
+
+            <SyncCountdown nextSyncAt={syncConfig?.nextSyncAt} />
 
             <Button 
               variant="secondary" 

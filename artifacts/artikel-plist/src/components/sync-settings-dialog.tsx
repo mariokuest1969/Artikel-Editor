@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useGetSyncConfig, useSetSyncConfig } from "@workspace/api-client-react";
+import { useGetSyncConfig, useSetSyncConfig, getGetSyncConfigQueryKey, type SyncConfig } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 const INTERVAL_OPTIONS = [
@@ -66,9 +67,15 @@ interface SyncSettingsDialogProps {
 export function SyncSettingsDialog({ onIntervalChanged }: SyncSettingsDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: syncConfig } = useGetSyncConfig();
   const setConfigMutation = useSetSyncConfig();
+
+  function applyConfig(config: SyncConfig) {
+    queryClient.setQueryData(getGetSyncConfigQueryKey(), config);
+    onIntervalChanged?.(config.intervalMs);
+  }
 
   // On mount: if localStorage has a preferred interval different from server, apply it.
   useEffect(() => {
@@ -76,7 +83,7 @@ export function SyncSettingsDialog({ onIntervalChanged }: SyncSettingsDialogProp
     if (persisted !== null && syncConfig !== undefined && persisted !== syncConfig.intervalMs) {
       setConfigMutation.mutate(
         { data: { intervalMs: persisted } },
-        { onSuccess: (res) => onIntervalChanged?.(res.intervalMs) },
+        { onSuccess: applyConfig },
       );
     }
     // Only run once after first server data load
@@ -100,7 +107,7 @@ export function SyncSettingsDialog({ onIntervalChanged }: SyncSettingsDialogProp
             title: "Auto-Sync aktualisiert",
             description: `Intervall auf ${formatIntervalLabel(res.intervalMs)} gesetzt.`,
           });
-          onIntervalChanged?.(res.intervalMs);
+          applyConfig(res);
         },
         onError: () => {
           toast({

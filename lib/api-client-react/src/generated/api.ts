@@ -38,6 +38,7 @@ import type {
   StoragePathsInput,
   StorageSettings,
   SyncConfig,
+  SyncConfigInput,
   TransferResult
 } from './api.schemas';
 
@@ -1419,14 +1420,14 @@ export const getSetSyncConfigUrl = () => {
   return `/api/sync-config`
 }
 
-export const setSyncConfig = async (syncConfig: SyncConfig, options?: RequestInit): Promise<SyncConfig> => {
+export const setSyncConfig = async (syncConfigInput: SyncConfigInput, options?: RequestInit): Promise<SyncConfig> => {
 
   return customFetch<SyncConfig>(getSetSyncConfigUrl(),
   {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(syncConfig)
+    body: JSON.stringify(syncConfigInput)
   }
 );}
 
@@ -1434,8 +1435,8 @@ export const setSyncConfig = async (syncConfig: SyncConfig, options?: RequestIni
 
 
 export const getSetSyncConfigMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setSyncConfig>>, TError,{data: BodyType<SyncConfig>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof setSyncConfig>>, TError,{data: BodyType<SyncConfig>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setSyncConfig>>, TError,{data: BodyType<SyncConfigInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setSyncConfig>>, TError,{data: BodyType<SyncConfigInput>}, TContext> => {
 
 const mutationKey = ['setSyncConfig'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -1447,7 +1448,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setSyncConfig>>, {data: BodyType<SyncConfig>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setSyncConfig>>, {data: BodyType<SyncConfigInput>}> = (props) => {
           const {data} = props ?? {};
 
           return  setSyncConfig(data,requestOptions)
@@ -1461,15 +1462,15 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SetSyncConfigMutationResult = NonNullable<Awaited<ReturnType<typeof setSyncConfig>>>
-    export type SetSyncConfigMutationBody = BodyType<SyncConfig>
+    export type SetSyncConfigMutationBody = BodyType<SyncConfigInput>
     export type SetSyncConfigMutationError = ErrorType<unknown>
 
     export const useSetSyncConfig = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setSyncConfig>>, TError,{data: BodyType<SyncConfig>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setSyncConfig>>, TError,{data: BodyType<SyncConfigInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof setSyncConfig>>,
         TError,
-        {data: BodyType<SyncConfig>},
+        {data: BodyType<SyncConfigInput>},
         TContext
       > => {
       return useMutation(getSetSyncConfigMutationOptions(options));

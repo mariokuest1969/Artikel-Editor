@@ -1,3 +1,4 @@
 - [Dropbox connector proxy content-host limitation](dropbox-connector-proxy.md) — content-host endpoints (upload/download) 404 through `connectors.proxy`; use temporary-link endpoints + direct fetch instead.
 - [OpenAPI update body schemas](openapi-update-body-schema.md) — update/PUT routes must not reuse the create schema's required-field set for body validation.
 - [Storage and access policy](storage-access-policy.md) — own Dropbox app plus local files; full-app admin protection; split import/export paths must not auto-reload old input.
+- [Sync countdown semantics](sync-countdown-semantics.md) — countdowns reflect the server schedule, not the last successful Dropbox download.

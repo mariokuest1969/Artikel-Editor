@@ -517,7 +517,8 @@ export const getSyncConfigResponseIntervalMsMin = 0;
 
 
 export const GetSyncConfigResponse = zod.object({
-  "intervalMs": zod.number().min(getSyncConfigResponseIntervalMsMin)
+  "intervalMs": zod.number().min(getSyncConfigResponseIntervalMsMin),
+  "nextSyncAt": zod.string().nullable().describe('ISO 8601 timestamp of the next scheduled automatic sync, or null when not scheduled.')
 })
 
 
@@ -534,7 +535,8 @@ export const setSyncConfigResponseIntervalMsMin = 0;
 
 
 export const SetSyncConfigResponse = zod.object({
-  "intervalMs": zod.number().min(setSyncConfigResponseIntervalMsMin)
+  "intervalMs": zod.number().min(setSyncConfigResponseIntervalMsMin),
+  "nextSyncAt": zod.string().nullable().describe('ISO 8601 timestamp of the next scheduled automatic sync, or null when not scheduled.')
 })
 
 

@@ -77,6 +77,7 @@ let loaded = false;
 let loadPromise: Promise<void> | null = null;
 let autoSyncTimer: ReturnType<typeof setInterval> | null = null;
 let currentIntervalMs: number | null = null;
+let nextSyncAt: number | null = null;
 
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -113,6 +114,13 @@ export function getAutoSyncInterval(): number {
   return resolveIntervalMs();
 }
 
+export function getAutoSyncConfig() {
+  return {
+    intervalMs: getAutoSyncInterval(),
+    nextSyncAt: nextSyncAt === null ? null : new Date(nextSyncAt).toISOString(),
+  };
+}
+
 /**
  * Change the auto-sync interval at runtime. The running timer is replaced
  * immediately so the next tick fires after the new interval. The value is
@@ -121,6 +129,10 @@ export function getAutoSyncInterval(): number {
 export function setAutoSyncInterval(ms: number): void {
   currentIntervalMs = ms;
   writePersistedConfig({ intervalMs: ms });
+  restartAutoSync();
+}
+
+function restartAutoSync(): void {
   if (autoSyncTimer !== null) {
     clearInterval(autoSyncTimer);
     autoSyncTimer = null;
@@ -234,7 +246,9 @@ export function startAutoSync(): void {
 
   logger.info({ intervalMs }, "Auto-sync started");
 
+  nextSyncAt = Date.now() + intervalMs;
   autoSyncTimer = setInterval(() => {
+    nextSyncAt = Date.now() + intervalMs;
     logger.info("Auto-sync: running background sync from Dropbox");
     withStorageLock(async () => {
       const settings = await getStoragePaths();
@@ -264,6 +278,8 @@ export async function ensureLoaded(): Promise<void> {
 }
 
 export async function syncFromDropbox(): Promise<MetaResult> {
+  // A manual attempt starts a fresh interval, even if Dropbox rejects it.
+  restartAutoSync();
   return withStorageLock(async () => {
     const settings = await getStoragePaths();
     if (settings.mode === "local" || settings.importPath !== settings.exportPath) {
