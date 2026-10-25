@@ -3,6 +3,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { downloadPlist, uploadPlist } from "./dropbox";
 import { logger } from "./logger";
+import { getStoragePaths, readState, writeState } from "./storageSettings";
+import { withStorageLock } from "./storageLock";
 
 // ---------------------------------------------------------------------------
 // Persisted config (survives server restarts)
@@ -126,10 +128,25 @@ export function setAutoSyncInterval(ms: number): void {
   startAutoSync();
 }
 
-function parsePlistToArticles(raw: string): Article[] {
+function parsePlistToArticles(raw: string, rejectDuplicates = false): Article[] {
+  if (Buffer.byteLength(raw, "utf8") > 10_000_000) throw new Error("Die Datei darf höchstens 10 MB groß sein.");
+  if (raw.startsWith("bplist")) throw new Error("Binäre plist-Dateien werden nicht unterstützt. Bitte als XML-plist exportieren.");
+  if (/<!ENTITY/i.test(raw) || /<!DOCTYPE[^>]*\[/i.test(raw)) throw new Error("XML-Entitäten sind nicht erlaubt.");
   const parsed = plist.parse(raw);
   if (!Array.isArray(parsed)) {
     throw new Error("Unexpected plist structure: expected top-level array");
+  }
+  const ids = new Set<string>();
+  for (const item of parsed) {
+    const record = item as Record<string, unknown>;
+    if (!item || typeof item !== "object" || Array.isArray(item) ||
+        typeof record.ArtikelId !== "string" || !record.ArtikelId.trim() ||
+        typeof record.Artikel !== "string" ||
+        Object.values(item).some((value) => typeof value !== "string")) {
+      throw new Error("Ungültiger Artikel: ArtikelId, Artikel und alle Feldwerte müssen Zeichenketten sein.");
+    }
+    if (rejectDuplicates && ids.has(record.ArtikelId as string)) throw new Error(`Doppelte Artikelnummer: ${record.ArtikelId}`);
+    ids.add(record.ArtikelId as string);
   }
   return parsed as Article[];
 }
@@ -184,21 +201,25 @@ function normalizeArticles(items: Article[]): { items: Article[]; changed: boole
 }
 
 async function doLoad(): Promise<void> {
+  const settings = await getStoragePaths();
+  if (settings.mode === "local") {
+    articles = (await readState<Article[]>("active-articles")) ?? [];
+    loaded = true;
+    return;
+  }
   const raw = await downloadPlist();
   const parsed = parsePlistToArticles(raw);
   const { items, changed } = normalizeArticles(parsed);
+  if (changed && settings.importPath === settings.exportPath) {
+    await uploadPlist(serializeArticlesToPlist(items), settings);
+  }
+  await writeState("active-articles", items);
   articles = items;
   lastSync = new Date();
   lastSyncError = null;
   loaded = true;
   logger.info({ count: articles.length }, "Loaded articles from Dropbox");
 
-  if (changed) {
-    logger.info(
-      "Automatic normalization (Tresen -> 19% MWSt / Leerzeilen entfernen) changed data; persisting corrected plist to Dropbox",
-    );
-    await persist();
-  }
 }
 
 /**
@@ -215,7 +236,11 @@ export function startAutoSync(): void {
 
   autoSyncTimer = setInterval(() => {
     logger.info("Auto-sync: running background sync from Dropbox");
-    doLoad().catch((err: unknown) => {
+    withStorageLock(async () => {
+      const settings = await getStoragePaths();
+      if (settings.mode === "local" || settings.importPath !== settings.exportPath) return;
+      await doLoad();
+    }).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
       lastSyncError = message;
       logger.error({ err }, "Auto-sync failed");
@@ -227,6 +252,8 @@ export function startAutoSync(): void {
 }
 
 export async function ensureLoaded(): Promise<void> {
+  const persisted = await readState<Article[]>("active-articles");
+  if (persisted) { articles = persisted; loaded = true; return; }
   if (loaded) return;
   if (!loadPromise) {
     loadPromise = doLoad().finally(() => {
@@ -237,13 +264,40 @@ export async function ensureLoaded(): Promise<void> {
 }
 
 export async function syncFromDropbox(): Promise<MetaResult> {
-  await doLoad();
-  return getMeta();
+  return withStorageLock(async () => {
+    const settings = await getStoragePaths();
+    if (settings.mode === "local" || settings.importPath !== settings.exportPath) {
+      throw new Error("Bitte den Import mit Vorschau auf der Einstellungsseite verwenden.");
+    }
+    await doLoad();
+    return getMeta();
+  });
 }
 
 async function persist(): Promise<void> {
   const raw = serializeArticlesToPlist(articles);
-  await uploadPlist(raw);
+  const settings = await getStoragePaths();
+  if (settings.mode === "dropbox") await uploadPlist(raw, settings);
+  await writeState("active-articles", articles);
+}
+
+export function validateImport(raw: string): Article[] {
+  return normalizeArticles(parsePlistToArticles(raw, true)).items;
+}
+
+export function countStoredArticles(raw: string): number {
+  return parsePlistToArticles(raw).length;
+}
+
+/** Caller holds storage lock and has verified confirmation against current data. */
+export async function replaceArticles(items: Article[]): Promise<void> {
+  const settings = await getStoragePaths();
+  if (settings.mode === "dropbox") await uploadPlist(serializeArticlesToPlist(items), settings);
+  await writeState("active-articles", items);
+  articles = items;
+  loaded = true;
+  lastSync = new Date();
+  lastSyncError = null;
 }
 
 export async function listArticles(params: ListParams): Promise<ListResult> {
@@ -293,7 +347,7 @@ function nextArtikelId(): string {
   return String(max + 1);
 }
 
-export async function cloneArticle(id: string): Promise<Article | undefined> {
+async function cloneArticleUnlocked(id: string): Promise<Article | undefined> {
   await ensureLoaded();
   const source = articles.find((a) => a.ArtikelId === id);
   if (!source) return undefined;
@@ -311,7 +365,7 @@ export async function cloneArticle(id: string): Promise<Article | undefined> {
   return copy;
 }
 
-export async function createArticle(input: ArticleInput): Promise<Article> {
+async function createArticleUnlocked(input: ArticleInput): Promise<Article> {
   await ensureLoaded();
 
   const id = input.ArtikelId && input.ArtikelId.trim() !== "" ? input.ArtikelId : nextArtikelId();
@@ -330,9 +384,9 @@ export async function createArticle(input: ArticleInput): Promise<Article> {
   return article;
 }
 
-export async function updateArticle(
+async function updateArticleUnlocked(
   id: string,
-  input: ArticleInput,
+  input: Partial<ArticleInput>,
 ): Promise<Article | undefined> {
   await ensureLoaded();
 
@@ -350,7 +404,7 @@ export async function updateArticle(
   return updated;
 }
 
-export async function deleteArticle(id: string): Promise<boolean> {
+async function deleteArticleUnlocked(id: string): Promise<boolean> {
   await ensureLoaded();
 
   const index = articles.findIndex((a) => a.ArtikelId === id);
@@ -365,6 +419,11 @@ export async function exportPlist(): Promise<string> {
   await ensureLoaded();
   return serializeArticlesToPlist(articles);
 }
+
+export const cloneArticle = (id: string) => withStorageLock(() => cloneArticleUnlocked(id));
+export const createArticle = (input: ArticleInput) => withStorageLock(() => createArticleUnlocked(input));
+export const updateArticle = (id: string, input: Partial<ArticleInput>) => withStorageLock(() => updateArticleUnlocked(id, input));
+export const deleteArticle = (id: string) => withStorageLock(() => deleteArticleUnlocked(id));
 
 export async function getMeta(): Promise<MetaResult> {
   await ensureLoaded();

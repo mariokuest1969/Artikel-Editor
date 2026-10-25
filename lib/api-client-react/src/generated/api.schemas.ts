@@ -5,6 +5,73 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type StoragePathsInputMode = typeof StoragePathsInputMode[keyof typeof StoragePathsInputMode];
+
+
+export const StoragePathsInputMode = {
+  dropbox: 'dropbox',
+  local: 'local',
+} as const;
+
+export type StoragePathsInputProvider = typeof StoragePathsInputProvider[keyof typeof StoragePathsInputProvider];
+
+
+export const StoragePathsInputProvider = {
+  connector: 'connector',
+  own: 'own',
+} as const;
+
+export interface StoragePathsInput {
+  mode: StoragePathsInputMode;
+  provider: StoragePathsInputProvider;
+  importPath: string;
+  exportPath: string;
+}
+
+export type StorageSettings = StoragePathsInput & {
+  appKeyConfigured: boolean;
+  appSecretConfigured: boolean;
+  ownConnected: boolean;
+  redirectUri: string;
+};
+
+export type ImportInputSource = typeof ImportInputSource[keyof typeof ImportInputSource];
+
+
+export const ImportInputSource = {
+  local: 'local',
+  dropbox: 'dropbox',
+} as const;
+
+export interface ImportInput {
+  source: ImportInputSource;
+  /** @maxLength 10000000 */
+  content?: string;
+}
+
+export type ImportConfirmation = ImportInput & {
+  token: string;
+};
+
+export type ImportPreviewSampleItem = {
+  ArtikelId: string;
+  Artikel: string;
+  Preis: string;
+};
+
+export interface ImportPreview {
+  count: number;
+  currentCount: number;
+  token: string;
+  destination: string;
+  sample: ImportPreviewSampleItem[];
+}
+
+export interface TransferResult {
+  count: number;
+  message: string;
+}
+
 export interface SyncConfig {
   /** @minimum 0 */
   intervalMs: number;
@@ -98,6 +165,40 @@ export interface MetaResponse {
   preislisten: string[];
   warengruppen: string[];
 }
+
+export type GetAccess200 = {
+  allowed: boolean;
+  configured: boolean;
+};
+
+export type ConnectOwnDropbox200 = {
+  url: string;
+};
+
+export type BrowseDropboxParams = {
+path?: string;
+cursor?: string;
+};
+
+export type BrowseDropbox200EntriesItemKind = typeof BrowseDropbox200EntriesItemKind[keyof typeof BrowseDropbox200EntriesItemKind];
+
+
+export const BrowseDropbox200EntriesItemKind = {
+  folder: 'folder',
+  file: 'file',
+} as const;
+
+export type BrowseDropbox200EntriesItem = {
+  name: string;
+  path: string;
+  kind: BrowseDropbox200EntriesItemKind;
+};
+
+export type BrowseDropbox200 = {
+  cursor: string;
+  hasMore: boolean;
+  entries: BrowseDropbox200EntriesItem[];
+};
 
 export type ListArticlesParams = {
 search?: string;

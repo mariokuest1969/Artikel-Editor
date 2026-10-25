@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
-import { RefreshCw, LayoutDashboard, Plus, Download, AlertTriangle, Clock, Timer } from "lucide-react";
+import { Settings, LogOut, RefreshCw, LayoutDashboard, Plus, Download, AlertTriangle, Clock, Timer } from "lucide-react";
 import { useGetMeta, useSyncFromDropbox, getGetMetaQueryKey, getListArticlesQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ToastAction } from "@/components/ui/toast";
@@ -10,9 +10,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SyncSettingsDialog, formatIntervalLabel } from "@/components/sync-settings-dialog";
 import { useGetSyncConfig, getGetSyncConfigQueryKey } from "@workspace/api-client-react";
 import { useRef, useEffect } from "react";
+import { useClerk, useUser } from "@clerk/react";
+
+const layoutBasePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { signOut } = useClerk();
+  const { user } = useUser();
+  const queryClientForLogout = useQueryClient();
   // Poll every 30 seconds so the UI picks up background auto-sync changes quickly.
   const { data: meta } = useGetMeta({
     query: {
@@ -85,13 +91,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
         
         <nav className="flex-1 px-4 space-y-1">
-          <Link href="/" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${location === "/" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>
+          <Link href="/artikel" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${location === "/artikel" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>
             <LayoutDashboard className="w-4 h-4" />
-            <span>Articles List</span>
+            <span>Artikelliste</span>
           </Link>
           <Link href="/artikel/neu" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${location === "/artikel/neu" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>
             <Plus className="w-4 h-4" />
-            <span>New Article</span>
+            <span>Neuer Artikel</span>
+          </Link>
+          <Link href="/einstellungen" data-testid="link-settings" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${location === "/einstellungen" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"}`}>
+            <Settings className="w-4 h-4" />
+            <span>Einstellungen</span>
           </Link>
         </nav>
 
@@ -149,11 +159,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
               className="w-full h-8 text-xs mt-2"
               data-testid="button-export"
             >
-              <a href="/api/export" download>
+              <a href={`${window.location.origin}/api/export`} download>
                 <Download className="w-3 h-3 mr-2" />
                 Als .plist exportieren
               </a>
             </Button>
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5">
+            <p className="text-xs text-sidebar-foreground/60 truncate" data-testid="text-user-email">
+              {user?.primaryEmailAddress?.emailAddress ?? "Angemeldet"}
+            </p>
+            <button
+              type="button"
+              data-testid="button-logout"
+              onClick={() => { queryClientForLogout.clear(); void signOut({ redirectUrl: layoutBasePath || "/" }); }}
+              className="flex items-center gap-1 text-xs text-sidebar-foreground/70 hover:text-sidebar-foreground"
+            >
+              <LogOut className="w-3 h-3" /> Abmelden
+            </button>
           </div>
           <div className="text-xs text-sidebar-foreground/50 text-center">
             {meta?.gesamtAnzahl ? `${meta.gesamtAnzahl} Artikel gesamt` : ""}

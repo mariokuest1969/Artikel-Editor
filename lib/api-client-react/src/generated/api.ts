@@ -23,12 +23,22 @@ import type {
   Article,
   ArticleInput,
   ArticleListResponse,
+  BrowseDropbox200,
+  BrowseDropboxParams,
+  ConnectOwnDropbox200,
   DeleteResponse,
   ErrorResponse,
+  GetAccess200,
   HealthStatus,
+  ImportConfirmation,
+  ImportInput,
+  ImportPreview,
   ListArticlesParams,
   MetaResponse,
-  SyncConfig
+  StoragePathsInput,
+  StorageSettings,
+  SyncConfig,
+  TransferResult
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -57,6 +67,610 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetAccessUrl = () => {
+
+
+
+
+  return `/api/access`
+}
+
+export const getAccess = async ( options?: RequestInit): Promise<GetAccess200> => {
+
+  return customFetch<GetAccess200>(getGetAccessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAccessQueryKey = () => {
+    return [
+    `/api/access`
+    ] as const;
+    }
+
+
+export const getGetAccessQueryOptions = <TData = Awaited<ReturnType<typeof getAccess>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAccessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAccess>>> = ({ signal }) => getAccess({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAccessQueryResult = NonNullable<Awaited<ReturnType<typeof getAccess>>>
+export type GetAccessQueryError = ErrorType<unknown>
+
+
+
+export function useGetAccess<TData = Awaited<ReturnType<typeof getAccess>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAccessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetStorageSettingsUrl = () => {
+
+
+
+
+  return `/api/settings`
+}
+
+export const getStorageSettings = async ( options?: RequestInit): Promise<StorageSettings> => {
+
+  return customFetch<StorageSettings>(getGetStorageSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStorageSettingsQueryKey = () => {
+    return [
+    `/api/settings`
+    ] as const;
+    }
+
+
+export const getGetStorageSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getStorageSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStorageSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStorageSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStorageSettings>>> = ({ signal }) => getStorageSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStorageSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStorageSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getStorageSettings>>>
+export type GetStorageSettingsQueryError = ErrorType<unknown>
+
+
+
+export function useGetStorageSettings<TData = Awaited<ReturnType<typeof getStorageSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStorageSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStorageSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveStorageSettingsUrl = () => {
+
+
+
+
+  return `/api/settings`
+}
+
+export const saveStorageSettings = async (storagePathsInput: StoragePathsInput, options?: RequestInit): Promise<StorageSettings> => {
+
+  return customFetch<StorageSettings>(getSaveStorageSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(storagePathsInput)
+  }
+);}
+
+
+
+
+export const getSaveStorageSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveStorageSettings>>, TError,{data: BodyType<StoragePathsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveStorageSettings>>, TError,{data: BodyType<StoragePathsInput>}, TContext> => {
+
+const mutationKey = ['saveStorageSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveStorageSettings>>, {data: BodyType<StoragePathsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveStorageSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveStorageSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof saveStorageSettings>>>
+    export type SaveStorageSettingsMutationBody = BodyType<StoragePathsInput>
+    export type SaveStorageSettingsMutationError = ErrorType<unknown>
+
+    export const useSaveStorageSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveStorageSettings>>, TError,{data: BodyType<StoragePathsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveStorageSettings>>,
+        TError,
+        {data: BodyType<StoragePathsInput>},
+        TContext
+      > => {
+      return useMutation(getSaveStorageSettingsMutationOptions(options));
+    }
+
+export const getConnectOwnDropboxUrl = () => {
+
+
+
+
+  return `/api/settings/dropbox/connect`
+}
+
+export const connectOwnDropbox = async ( options?: RequestInit): Promise<ConnectOwnDropbox200> => {
+
+  return customFetch<ConnectOwnDropbox200>(getConnectOwnDropboxUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getConnectOwnDropboxMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connectOwnDropbox>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof connectOwnDropbox>>, TError,void, TContext> => {
+
+const mutationKey = ['connectOwnDropbox'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof connectOwnDropbox>>, void> = () => {
+
+
+          return  connectOwnDropbox(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConnectOwnDropboxMutationResult = NonNullable<Awaited<ReturnType<typeof connectOwnDropbox>>>
+
+    export type ConnectOwnDropboxMutationError = ErrorType<unknown>
+
+    export const useConnectOwnDropbox = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof connectOwnDropbox>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof connectOwnDropbox>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getConnectOwnDropboxMutationOptions(options));
+    }
+
+export const getDisconnectOwnDropboxUrl = () => {
+
+
+
+
+  return `/api/settings/dropbox/disconnect`
+}
+
+export const disconnectOwnDropbox = async ( options?: RequestInit): Promise<StorageSettings> => {
+
+  return customFetch<StorageSettings>(getDisconnectOwnDropboxUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDisconnectOwnDropboxMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectOwnDropbox>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof disconnectOwnDropbox>>, TError,void, TContext> => {
+
+const mutationKey = ['disconnectOwnDropbox'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnectOwnDropbox>>, void> = () => {
+
+
+          return  disconnectOwnDropbox(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DisconnectOwnDropboxMutationResult = NonNullable<Awaited<ReturnType<typeof disconnectOwnDropbox>>>
+
+    export type DisconnectOwnDropboxMutationError = ErrorType<unknown>
+
+    export const useDisconnectOwnDropbox = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectOwnDropbox>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof disconnectOwnDropbox>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDisconnectOwnDropboxMutationOptions(options));
+    }
+
+export const getBrowseDropboxUrl = (params?: BrowseDropboxParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/settings/dropbox/browse?${stringifiedParams}` : `/api/settings/dropbox/browse`
+}
+
+export const browseDropbox = async (params?: BrowseDropboxParams, options?: RequestInit): Promise<BrowseDropbox200> => {
+
+  return customFetch<BrowseDropbox200>(getBrowseDropboxUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getBrowseDropboxQueryKey = (params?: BrowseDropboxParams,) => {
+    return [
+    `/api/settings/dropbox/browse`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getBrowseDropboxQueryOptions = <TData = Awaited<ReturnType<typeof browseDropbox>>, TError = ErrorType<unknown>>(params?: BrowseDropboxParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof browseDropbox>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBrowseDropboxQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof browseDropbox>>> = ({ signal }) => browseDropbox(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof browseDropbox>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type BrowseDropboxQueryResult = NonNullable<Awaited<ReturnType<typeof browseDropbox>>>
+export type BrowseDropboxQueryError = ErrorType<unknown>
+
+
+
+export function useBrowseDropbox<TData = Awaited<ReturnType<typeof browseDropbox>>, TError = ErrorType<unknown>>(
+ params?: BrowseDropboxParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof browseDropbox>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getBrowseDropboxQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPreviewImportUrl = () => {
+
+
+
+
+  return `/api/transfer/preview`
+}
+
+export const previewImport = async (importInput: ImportInput, options?: RequestInit): Promise<ImportPreview> => {
+
+  return customFetch<ImportPreview>(getPreviewImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(importInput)
+  }
+);}
+
+
+
+
+export const getPreviewImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewImport>>, TError,{data: BodyType<ImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewImport>>, TError,{data: BodyType<ImportInput>}, TContext> => {
+
+const mutationKey = ['previewImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewImport>>, {data: BodyType<ImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewImport>>>
+    export type PreviewImportMutationBody = BodyType<ImportInput>
+    export type PreviewImportMutationError = ErrorType<unknown>
+
+    export const usePreviewImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewImport>>, TError,{data: BodyType<ImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewImport>>,
+        TError,
+        {data: BodyType<ImportInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewImportMutationOptions(options));
+    }
+
+export const getConfirmImportUrl = () => {
+
+
+
+
+  return `/api/transfer/import`
+}
+
+export const confirmImport = async (importConfirmation: ImportConfirmation, options?: RequestInit): Promise<TransferResult> => {
+
+  return customFetch<TransferResult>(getConfirmImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(importConfirmation)
+  }
+);}
+
+
+
+
+export const getConfirmImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmImport>>, TError,{data: BodyType<ImportConfirmation>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmImport>>, TError,{data: BodyType<ImportConfirmation>}, TContext> => {
+
+const mutationKey = ['confirmImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmImport>>, {data: BodyType<ImportConfirmation>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  confirmImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmImportMutationResult = NonNullable<Awaited<ReturnType<typeof confirmImport>>>
+    export type ConfirmImportMutationBody = BodyType<ImportConfirmation>
+    export type ConfirmImportMutationError = ErrorType<unknown>
+
+    export const useConfirmImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmImport>>, TError,{data: BodyType<ImportConfirmation>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmImport>>,
+        TError,
+        {data: BodyType<ImportConfirmation>},
+        TContext
+      > => {
+      return useMutation(getConfirmImportMutationOptions(options));
+    }
+
+export const getExportToDropboxUrl = () => {
+
+
+
+
+  return `/api/transfer/export`
+}
+
+export const exportToDropbox = async ( options?: RequestInit): Promise<TransferResult> => {
+
+  return customFetch<TransferResult>(getExportToDropboxUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getExportToDropboxMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportToDropbox>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exportToDropbox>>, TError,void, TContext> => {
+
+const mutationKey = ['exportToDropbox'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportToDropbox>>, void> = () => {
+
+
+          return  exportToDropbox(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExportToDropboxMutationResult = NonNullable<Awaited<ReturnType<typeof exportToDropbox>>>
+
+    export type ExportToDropboxMutationError = ErrorType<unknown>
+
+    export const useExportToDropbox = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportToDropbox>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exportToDropbox>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getExportToDropboxMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

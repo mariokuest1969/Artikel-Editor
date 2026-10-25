@@ -185,7 +185,7 @@ export default function ArticleForm() {
         onSuccess: () => {
           toast({ title: "Article created", description: "The article has been successfully created." });
           queryClient.invalidateQueries({ queryKey: getListArticlesQueryKey() });
-          setLocation("/");
+          setLocation("/artikel");
         },
         onError: (err) => {
           toast({ title: "Error", description: err.message || "Failed to create article", variant: "destructive" });
@@ -198,7 +198,7 @@ export default function ArticleForm() {
           queryClient.invalidateQueries({ queryKey: getListArticlesQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetArticleQueryKey(articleId) });
           // Optional: redirect back to list
-          // setLocation("/");
+          // setLocation("/artikel");
         },
         onError: (err) => {
           toast({ title: "Error", description: err.message || "Failed to update article", variant: "destructive" });
@@ -231,7 +231,7 @@ export default function ArticleForm() {
       onSuccess: () => {
         toast({ title: "Article deleted", description: "The article has been removed." });
         queryClient.invalidateQueries({ queryKey: getListArticlesQueryKey() });
-        setLocation("/");
+        setLocation("/artikel");
       },
       onError: (err) => {
         toast({ title: "Error", description: err.message || "Failed to delete article", variant: "destructive" });
@@ -255,7 +255,7 @@ export default function ArticleForm() {
     <Layout>
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setLocation("/")} className="text-muted-foreground">
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/artikel")} className="text-muted-foreground">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>

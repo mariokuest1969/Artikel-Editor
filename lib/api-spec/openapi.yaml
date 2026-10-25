@@ -13,6 +13,136 @@ tags:
   - name: articles
     description: Artikel operations (synced with Dropbox plist file)
 paths:
+  /access:
+    get:
+      operationId: getAccess
+      responses:
+        "200":
+          description: Authenticated access status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [allowed, configured]
+                properties:
+                  allowed: { type: boolean }
+                  configured: { type: boolean }
+  /settings:
+    get:
+      operationId: getStorageSettings
+      responses:
+        "200":
+          description: Storage and credential status, never secret values
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageSettings"
+    put:
+      operationId: saveStorageSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoragePathsInput"
+      responses:
+        "200":
+          description: Saved settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageSettings"
+  /settings/dropbox/connect:
+    post:
+      operationId: connectOwnDropbox
+      responses:
+        "200":
+          description: OAuth authorization URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url: { type: string }
+  /settings/dropbox/disconnect:
+    post:
+      operationId: disconnectOwnDropbox
+      responses:
+        "200":
+          description: Disconnected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageSettings"
+  /settings/dropbox/browse:
+    get:
+      operationId: browseDropbox
+      parameters:
+        - { name: path, in: query, schema: { type: string } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Dropbox folders and plist files
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [entries, cursor, hasMore]
+                properties:
+                  cursor: { type: string }
+                  hasMore: { type: boolean }
+                  entries:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, path, kind]
+                      properties:
+                        name: { type: string }
+                        path: { type: string }
+                        kind: { type: string, enum: [folder, file] }
+  /transfer/preview:
+    post:
+      operationId: previewImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportInput"
+      responses:
+        "200":
+          description: Validated preview and short-lived confirmation token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportPreview"
+  /transfer/import:
+    post:
+      operationId: confirmImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportConfirmation"
+      responses:
+        "200":
+          description: Import committed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferResult"
+  /transfer/export:
+    post:
+      operationId: exportToDropbox
+      responses:
+        "200":
+          description: Export written to configured Dropbox path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferResult"
   /healthz:
     get:
       operationId: healthCheck
@@ -236,6 +366,60 @@ paths:
                 $ref: "#/components/schemas/SyncConfig"
 components:
   schemas:
+    StoragePathsInput:
+      type: object
+      required: [mode, provider, importPath, exportPath]
+      properties:
+        mode: { type: string, enum: [dropbox, local] }
+        provider: { type: string, enum: [connector, own] }
+        importPath: { type: string }
+        exportPath: { type: string }
+    StorageSettings:
+      allOf:
+        - $ref: "#/components/schemas/StoragePathsInput"
+        - type: object
+          required: [appKeyConfigured, appSecretConfigured, ownConnected, redirectUri]
+          properties:
+            appKeyConfigured: { type: boolean }
+            appSecretConfigured: { type: boolean }
+            ownConnected: { type: boolean }
+            redirectUri: { type: string }
+    ImportInput:
+      type: object
+      required: [source]
+      properties:
+        source: { type: string, enum: [local, dropbox] }
+        content: { type: string, maxLength: 10000000 }
+    ImportConfirmation:
+      allOf:
+        - $ref: "#/components/schemas/ImportInput"
+        - type: object
+          required: [token]
+          properties:
+            token: { type: string }
+    ImportPreview:
+      type: object
+      required: [count, currentCount, token, destination, sample]
+      properties:
+        count: { type: integer }
+        currentCount: { type: integer }
+        token: { type: string }
+        destination: { type: string }
+        sample:
+          type: array
+          items:
+            type: object
+            required: [ArtikelId, Artikel, Preis]
+            properties:
+              ArtikelId: { type: string }
+              Artikel: { type: string }
+              Preis: { type: string }
+    TransferResult:
+      type: object
+      required: [count, message]
+      properties:
+        count: { type: integer }
+        message: { type: string }
     SyncConfig:
       type: object
       required: [intervalMs]

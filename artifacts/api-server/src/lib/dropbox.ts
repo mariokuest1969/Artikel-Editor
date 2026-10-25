@@ -1,96 +1,70 @@
-// Dropbox integration (connection:conn_dropbox_01KW2WY38XAR8B9PTH9H9FCW75)
-// Uses the Replit Dropbox connector via the proxy pattern.
-// Do not cache the connectors client — tokens can be refreshed under the hood.
 import { ReplitConnectors } from "@replit/connectors-sdk";
-import { logger } from "./logger";
-
-const PLIST_PATH = "/Apps/Artikel-Plist/artikelData.plist";
+import { getStoragePaths, type StoragePaths } from "./storageSettings";
+import { ownDropboxConnected, ownDropboxRequest } from "./ownDropbox";
 
 const connectors = new ReplitConnectors();
-
-async function proxy(path: string, init?: RequestInit): Promise<Response> {
-  return connectors.proxy("dropbox", path, init);
+export async function dropboxRequest(path: string, body: unknown, provider?: StoragePaths["provider"]): Promise<Response> {
+  const active = provider ?? (await getStoragePaths()).provider;
+  if (active === "own") return ownDropboxRequest(path, body);
+  return connectors.proxy("dropbox", path, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
 }
 
-/**
- * Downloads the plist file content as a string.
- * Note: /2/files/download does not route correctly through the connector proxy
- * (content-host endpoints return 404), so we first request a temporary direct
- * link via /2/files/get_temporary_link, then fetch that link directly.
- */
-export async function downloadPlist(): Promise<string> {
-  const response = await proxy("/2/files/get_temporary_link", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path: PLIST_PATH }),
-  });
-
+async function checked(response: Response): Promise<Response> {
   if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(
-      `Dropbox get_temporary_link failed: ${response.status} ${text}`,
-    );
+    // Never return/log upstream payloads: they can contain signed URLs or credentials.
+    throw new Error(`Dropbox-Anfrage fehlgeschlagen (${response.status}). Verbindung, Berechtigungen und Dateipfad prüfen.`);
   }
-
-  const data = (await response.json()) as { link: string };
-
-  const fileResponse = await fetch(data.link);
-  if (!fileResponse.ok) {
-    throw new Error(
-      `Dropbox temporary link download failed: ${fileResponse.status}`,
-    );
-  }
-
-  return await fileResponse.text();
+  return response;
 }
 
-/**
- * Uploads new plist file content, overwriting the existing file.
- * Note: /2/files/upload does not route correctly through the connector proxy
- * either (it's also a content-host endpoint, same issue as /2/files/download),
- * so we first request a temporary direct upload link via
- * /2/files/get_temporary_upload_link, then POST the content to that link directly.
- */
-export async function uploadPlist(content: string): Promise<void> {
-  const linkResponse = await proxy("/2/files/get_temporary_upload_link", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      commit_info: {
-        path: PLIST_PATH,
-        mode: "overwrite",
-        autorename: false,
-        mute: true,
-      },
-      duration: 3600,
-    }),
-  });
-
-  if (!linkResponse.ok) {
-    const text = await linkResponse.text().catch(() => "");
-    logger.error(
-      { status: linkResponse.status, text },
-      "Dropbox get_temporary_upload_link failed",
-    );
-    throw new Error(
-      `Dropbox get_temporary_upload_link failed: ${linkResponse.status} ${text}`,
-    );
+export async function downloadPlist(config?: StoragePaths): Promise<string> {
+  const settings = config ?? await getStoragePaths();
+  const response = await checked(await dropboxRequest("/2/files/get_temporary_link", { path: settings.importPath }, settings.provider));
+  const { link } = await response.json() as { link: string };
+  const file = await checked(await fetch(link, { signal: AbortSignal.timeout(30000) }));
+  // Limit even streamed responses without Content-Length.
+  if (!file.body) throw new Error("Dropbox-Datei ist leer.");
+  const reader = file.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  while (true) {
+    const part = await reader.read();
+    if (part.done) break;
+    length += part.value.length;
+    if (length > 10_000_000) { await reader.cancel(); throw new Error("Die plist-Datei darf höchstens 10 MB groß sein."); }
+    chunks.push(part.value);
   }
+  return Buffer.concat(chunks).toString("utf8");
+}
 
-  const { link } = (await linkResponse.json()) as { link: string };
+export async function uploadPlist(content: string, config?: StoragePaths): Promise<void> {
+  const settings = config ?? await getStoragePaths();
+  const response = await checked(await dropboxRequest("/2/files/get_temporary_upload_link", {
+    commit_info: { path: settings.exportPath, mode: "overwrite", autorename: false, mute: true },
+    duration: 60,
+  }, settings.provider));
+  const { link } = await response.json() as { link: string };
+  await checked(await fetch(link, {
+    method: "POST", headers: { "Content-Type": "application/octet-stream" },
+    body: content, signal: AbortSignal.timeout(30000),
+  }));
+}
 
-  const uploadResponse = await fetch(link, {
-    method: "POST",
-    headers: { "Content-Type": "application/octet-stream" },
-    body: content,
-  });
-
-  if (!uploadResponse.ok) {
-    const text = await uploadResponse.text().catch(() => "");
-    logger.error(
-      { status: uploadResponse.status, text },
-      "Dropbox upload failed",
-    );
-    throw new Error(`Dropbox upload failed: ${uploadResponse.status} ${text}`);
-  }
+export async function browseDropbox(path: string, cursor?: string) {
+  const provider = await ownDropboxConnected() ? "own" : (await getStoragePaths()).provider;
+  const response = await checked(await dropboxRequest(
+    cursor ? "/2/files/list_folder/continue" : "/2/files/list_folder",
+    cursor ? { cursor } : { path, recursive: false, limit: 200 }, provider,
+  ));
+  const data = await response.json() as {
+    entries: { ".tag": string; name: string; path_display?: string; path_lower: string }[];
+    cursor: string; has_more: boolean;
+  };
+  return {
+    entries: data.entries.filter((item) => item[".tag"] === "folder" || item.name.toLowerCase().endsWith(".plist"))
+      .map((item) => ({ name: item.name, path: item.path_display ?? item.path_lower, kind: item[".tag"] })),
+    cursor: data.cursor, hasMore: data.has_more,
+  };
 }

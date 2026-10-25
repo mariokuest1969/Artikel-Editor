@@ -8,6 +8,124 @@
 import * as zod from 'zod';
 
 
+export const GetAccessResponse = zod.object({
+  "allowed": zod.boolean(),
+  "configured": zod.boolean()
+})
+
+
+export const GetStorageSettingsResponse = zod.object({
+  "mode": zod.enum(['dropbox', 'local']),
+  "provider": zod.enum(['connector', 'own']),
+  "importPath": zod.string(),
+  "exportPath": zod.string()
+}).and(zod.object({
+  "appKeyConfigured": zod.boolean(),
+  "appSecretConfigured": zod.boolean(),
+  "ownConnected": zod.boolean(),
+  "redirectUri": zod.string()
+}))
+
+
+export const SaveStorageSettingsBody = zod.object({
+  "mode": zod.enum(['dropbox', 'local']),
+  "provider": zod.enum(['connector', 'own']),
+  "importPath": zod.string(),
+  "exportPath": zod.string()
+})
+
+export const SaveStorageSettingsResponse = zod.object({
+  "mode": zod.enum(['dropbox', 'local']),
+  "provider": zod.enum(['connector', 'own']),
+  "importPath": zod.string(),
+  "exportPath": zod.string()
+}).and(zod.object({
+  "appKeyConfigured": zod.boolean(),
+  "appSecretConfigured": zod.boolean(),
+  "ownConnected": zod.boolean(),
+  "redirectUri": zod.string()
+}))
+
+
+export const ConnectOwnDropboxResponse = zod.object({
+  "url": zod.string()
+})
+
+
+export const DisconnectOwnDropboxResponse = zod.object({
+  "mode": zod.enum(['dropbox', 'local']),
+  "provider": zod.enum(['connector', 'own']),
+  "importPath": zod.string(),
+  "exportPath": zod.string()
+}).and(zod.object({
+  "appKeyConfigured": zod.boolean(),
+  "appSecretConfigured": zod.boolean(),
+  "ownConnected": zod.boolean(),
+  "redirectUri": zod.string()
+}))
+
+
+export const BrowseDropboxQueryParams = zod.object({
+  "path": zod.coerce.string().optional(),
+  "cursor": zod.coerce.string().optional()
+})
+
+export const BrowseDropboxResponse = zod.object({
+  "cursor": zod.string(),
+  "hasMore": zod.boolean(),
+  "entries": zod.array(zod.object({
+  "name": zod.string(),
+  "path": zod.string(),
+  "kind": zod.enum(['folder', 'file'])
+}))
+})
+
+
+export const previewImportBodyContentMax = 10000000;
+
+
+
+export const PreviewImportBody = zod.object({
+  "source": zod.enum(['local', 'dropbox']),
+  "content": zod.string().max(previewImportBodyContentMax).optional()
+})
+
+export const PreviewImportResponse = zod.object({
+  "count": zod.number(),
+  "currentCount": zod.number(),
+  "token": zod.string(),
+  "destination": zod.string(),
+  "sample": zod.array(zod.object({
+  "ArtikelId": zod.string(),
+  "Artikel": zod.string(),
+  "Preis": zod.string()
+}))
+})
+
+
+export const confirmImportBodyOneContentMax = 10000000;
+
+
+
+export const ConfirmImportBody = zod.object({
+  "source": zod.enum(['local', 'dropbox']),
+  "content": zod.string().max(confirmImportBodyOneContentMax).optional()
+}).and(zod.object({
+  "token": zod.string()
+}))
+
+export const ConfirmImportResponse = zod.object({
+  "count": zod.number(),
+  "message": zod.string()
+})
+
+
+export const ExportToDropboxResponse = zod.object({
+  "count": zod.number(),
+  "message": zod.string()
+})
+
+
 /**
  * Returns server health status
  * @summary Health check
