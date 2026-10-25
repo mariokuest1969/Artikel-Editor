@@ -1,6 +1,35 @@
 import * as plist from "plist";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { downloadPlist, uploadPlist } from "./dropbox";
 import { logger } from "./logger";
+
+// ---------------------------------------------------------------------------
+// Persisted config (survives server restarts)
+// ---------------------------------------------------------------------------
+
+const CONFIG_PATH = path.join(process.cwd(), "sync-config.json");
+
+interface PersistedConfig {
+  intervalMs?: number;
+}
+
+function readPersistedConfig(): PersistedConfig {
+  try {
+    const raw = fs.readFileSync(CONFIG_PATH, "utf8");
+    return JSON.parse(raw) as PersistedConfig;
+  } catch {
+    return {};
+  }
+}
+
+function writePersistedConfig(config: PersistedConfig): void {
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
+  } catch (err) {
+    logger.warn({ err, path: CONFIG_PATH }, "Failed to persist sync config");
+  }
+}
 
 // All plist fields are plain strings; keys match the original plist exactly
 // for round-trip fidelity.
@@ -51,6 +80,23 @@ const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 function resolveIntervalMs(): number {
   if (currentIntervalMs !== null) return currentIntervalMs;
+
+  // 1. Persisted config (written by setAutoSyncInterval, survives restarts)
+  const persisted = readPersistedConfig();
+  if (
+    persisted.intervalMs !== undefined &&
+    Number.isFinite(persisted.intervalMs) &&
+    persisted.intervalMs > 0
+  ) {
+    logger.info(
+      { intervalMs: persisted.intervalMs, source: "sync-config.json" },
+      "Loaded sync interval from persisted config",
+    );
+    currentIntervalMs = persisted.intervalMs;
+    return persisted.intervalMs;
+  }
+
+  // 2. Environment variable override
   const raw = process.env["AUTO_SYNC_INTERVAL_MS"];
   const parsed =
     raw && Number.isFinite(Number(raw)) && Number(raw) > 0
@@ -67,10 +113,12 @@ export function getAutoSyncInterval(): number {
 
 /**
  * Change the auto-sync interval at runtime. The running timer is replaced
- * immediately so the next tick fires after the new interval.
+ * immediately so the next tick fires after the new interval. The value is
+ * persisted to disk so it survives server restarts.
  */
 export function setAutoSyncInterval(ms: number): void {
   currentIntervalMs = ms;
+  writePersistedConfig({ intervalMs: ms });
   if (autoSyncTimer !== null) {
     clearInterval(autoSyncTimer);
     autoSyncTimer = null;
