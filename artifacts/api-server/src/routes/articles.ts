@@ -119,14 +119,18 @@ router.get("/sync-config", (_req, res) => {
   res.json(getAutoSyncConfig());
 });
 
-router.put("/sync-config", (req, res) => {
+router.put("/sync-config", async (req, res) => {
+  const parsed = SetSyncConfigBody.safeParse(req.body);
+  if (!parsed.success || !Number.isInteger(parsed.data.intervalMs)) {
+    res.status(400).json({ message: "Ungültige Konfiguration" });
+    return;
+  }
   try {
-    const { intervalMs } = SetSyncConfigBody.parse(req.body);
-    setAutoSyncInterval(intervalMs);
+    await setAutoSyncInterval(parsed.data.intervalMs);
     res.json(getAutoSyncConfig());
   } catch (err) {
-    logger.error({ err }, "Invalid sync-config body");
-    res.status(400).json({ message: "Ungültige Konfiguration" });
+    logger.error({ err }, "Failed to persist sync configuration");
+    res.status(500).json({ message: "Konfiguration konnte nicht gespeichert werden" });
   }
 });
 

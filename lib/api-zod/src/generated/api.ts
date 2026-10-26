@@ -522,12 +522,12 @@ export const GetSyncConfigResponse = zod.object({
 })
 
 
-export const setSyncConfigBodyIntervalMsMin = 0;
+export const setSyncConfigBodyIntervalMsMax = 2147483647;
 
 
 
 export const SetSyncConfigBody = zod.object({
-  "intervalMs": zod.number().min(setSyncConfigBodyIntervalMsMin)
+  "intervalMs": zod.number().min(1).max(setSyncConfigBodyIntervalMsMax)
 })
 
 export const setSyncConfigResponseIntervalMsMin = 0;

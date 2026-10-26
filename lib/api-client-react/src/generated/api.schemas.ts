@@ -83,7 +83,10 @@ export interface SyncConfig {
 }
 
 export interface SyncConfigInput {
-  /** @minimum 0 */
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
   intervalMs: number;
 }
 

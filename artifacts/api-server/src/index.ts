@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { startAutoSync } from "./lib/articleStore";
+import { initializeAutoSyncConfig, startAutoSync } from "./lib/articleStore";
 
 const rawPort = process.env["PORT"];
 
@@ -14,6 +14,13 @@ const port = Number(rawPort);
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
+}
+
+try {
+  await initializeAutoSyncConfig();
+} catch (err) {
+  logger.fatal({ err }, "Failed to initialize sync configuration");
+  process.exit(1);
 }
 
 app.listen(port, (err) => {

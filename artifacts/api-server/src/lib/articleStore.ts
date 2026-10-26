@@ -7,7 +7,7 @@ import { getStoragePaths, readState, writeState } from "./storageSettings";
 import { withStorageLock } from "./storageLock";
 
 // ---------------------------------------------------------------------------
-// Persisted config (survives server restarts)
+// Legacy config, read only to migrate existing installations into the database.
 // ---------------------------------------------------------------------------
 
 const CONFIG_PATH = path.join(process.cwd(), "sync-config.json");
@@ -22,14 +22,6 @@ function readPersistedConfig(): PersistedConfig {
     return JSON.parse(raw) as PersistedConfig;
   } catch {
     return {};
-  }
-}
-
-function writePersistedConfig(config: PersistedConfig): void {
-  try {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf8");
-  } catch (err) {
-    logger.warn({ err, path: CONFIG_PATH }, "Failed to persist sync config");
   }
 }
 
@@ -81,32 +73,46 @@ let nextSyncAt: number | null = null;
 
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
+function isRunnableInterval(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) &&
+    value >= 1 && value <= 2_147_483_647;
+}
+
 function resolveIntervalMs(): number {
   if (currentIntervalMs !== null) return currentIntervalMs;
+  throw new Error("Sync configuration has not been initialized");
+}
 
-  // 1. Persisted config (written by setAutoSyncInterval, survives restarts)
+/** Must finish before serving requests or starting the scheduler. DB errors are
+ * fatal at startup rather than silently replacing a saved interval. */
+export async function initializeAutoSyncConfig(): Promise<void> {
+  const stored = await readState<PersistedConfig>("sync-config");
+  if (stored !== null) {
+    if (!isRunnableInterval(stored.intervalMs)) {
+      throw new Error("Invalid sync interval in database");
+    }
+    currentIntervalMs = stored.intervalMs;
+    return;
+  }
+
+  // Migrate the legacy file once; subsequent starts always prefer the database.
   const persisted = readPersistedConfig();
+  let intervalMs: number;
   if (
-    persisted.intervalMs !== undefined &&
-    Number.isFinite(persisted.intervalMs) &&
-    persisted.intervalMs > 0
+    isRunnableInterval(persisted?.intervalMs)
   ) {
     logger.info(
       { intervalMs: persisted.intervalMs, source: "sync-config.json" },
       "Loaded sync interval from persisted config",
     );
-    currentIntervalMs = persisted.intervalMs;
-    return persisted.intervalMs;
+    intervalMs = persisted.intervalMs;
+  } else {
+    const raw = process.env["AUTO_SYNC_INTERVAL_MS"];
+    intervalMs = raw && isRunnableInterval(Number(raw))
+      ? Number(raw) : DEFAULT_INTERVAL_MS;
   }
-
-  // 2. Environment variable override
-  const raw = process.env["AUTO_SYNC_INTERVAL_MS"];
-  const parsed =
-    raw && Number.isFinite(Number(raw)) && Number(raw) > 0
-      ? Number(raw)
-      : DEFAULT_INTERVAL_MS;
-  currentIntervalMs = parsed;
-  return parsed;
+  await writeState("sync-config", { intervalMs });
+  currentIntervalMs = intervalMs;
 }
 
 /** Returns the currently active auto-sync interval in milliseconds. */
@@ -124,11 +130,12 @@ export function getAutoSyncConfig() {
 /**
  * Change the auto-sync interval at runtime. The running timer is replaced
  * immediately so the next tick fires after the new interval. The value is
- * persisted to disk so it survives server restarts.
+ * persisted to the database so it survives fresh server deployments.
  */
-export function setAutoSyncInterval(ms: number): void {
+export async function setAutoSyncInterval(ms: number): Promise<void> {
+  if (!isRunnableInterval(ms)) throw new Error("Invalid sync interval");
+  await writeState("sync-config", { intervalMs: ms });
   currentIntervalMs = ms;
-  writePersistedConfig({ intervalMs: ms });
   restartAutoSync();
 }
 
